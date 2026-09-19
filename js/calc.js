@@ -43,8 +43,13 @@ export function crucero(estado) {
   const { cruceroFaltante: inicial, cruceroMeses: meses } = estado.config;
   const abonado = suma(estado.abonos.map((a) => a.monto));
   const actual = inicial - abonado;
-  // «Meses restantes» lo escribe el usuario en Config, igual que en el Excel (no baja solo cada mes).
-  return { inicial, abonado, actual, meses, sugerido: meses > 0 ? actual / meses : 0 };
+  // Cuotas ya pagadas = abonos ligados a un mes (se ligan al marcar Pagado en Mes o al registrarlos «de» un mes).
+  const mesesPagados = new Set(estado.abonos.filter((a) => a.mes).map((a) => a.mes)).size;
+  // En el Excel «meses restantes» era un número que había que bajar a mano. Aquí baja solo con cada cuota pagada.
+  const restantes = Math.max(0, meses - mesesPagados);
+  // Abono sugerido = faltante / meses restantes (B8). Si ya se pagaron todos los meses previstos y aún falta, lo que falta es una sola cuota.
+  const sugerido = meses <= 0 ? 0 : Math.max(0, restantes > 0 ? actual / restantes : actual);
+  return { inicial, abonado, actual, meses, mesesPagados, restantes, sugerido };
 }
 
 // Hoja «Plan de Ahorro»: solo los meses desde config.ahorroDesde.
@@ -52,24 +57,38 @@ export function planAhorro(estado) {
   const { salario, gastoPersonal, metaAhorroPct, ahorroDesde } = estado.config;
   const cr = crucero(estado);
   const meta = salario * metaAhorroPct;
-  let paraCruceroAcum = 0;
+  // Lo pagado de cuota en cada mes (abonos ligados a ese mes).
+  const cuotaPagada = new Map();
+  for (const a of estado.abonos) if (a.mes) cuotaPagada.set(a.mes, (cuotaPagada.get(a.mes) ?? 0) + a.monto);
+  let paraCruceroAcum = 0; // solo de los meses con cuota pendiente: los pagados ya están descontados del faltante
   let ahorroAcum = 0;
   const filas = controlMensual(estado)
     .filas.filter((f) => f.id >= ahorroDesde)
     .map((f) => {
-      const paraCrucero = Math.max(0, Math.min(cr.sugerido, cr.actual - paraCruceroAcum)); // C
-      paraCruceroAcum += paraCrucero;
+      const mes = estado.meses.find((m) => m.id === f.id);
+      const cruceroPagado = cuotaPagada.has(f.id);
+      let paraCrucero; // C
+      if (cruceroPagado) {
+        paraCrucero = cuotaPagada.get(f.id); // lo que de verdad se pagó ese mes
+      } else {
+        paraCrucero = Math.max(0, Math.min(cr.sugerido, cr.actual - paraCruceroAcum));
+        paraCruceroAcum += paraCrucero;
+      }
       const ahorroPlan = f.saldo - paraCrucero - gastoPersonal; // E = B - C - D
+      const acumuladoAnterior = ahorroAcum;
       ahorroAcum += ahorroPlan; // H
-      const real = estado.meses.find((m) => m.id === f.id).ahorroReal; // I: lo llena el usuario
+      const real = mes.ahorroReal; // I: lo llena el usuario
       return {
         id: f.id,
         saldo: f.saldo,
         paraCrucero,
+        cruceroPagado,
         gastoPersonal,
+        personalPagado: mes.personal === 'Pagado',
         ahorroPlan,
         meta, // F
         cumple: centavos(ahorroPlan) >= centavos(meta), // G
+        acumuladoAnterior,
         acumulado: ahorroAcum,
         real,
         diferencia: real == null ? null : real - ahorroPlan, // J
@@ -83,6 +102,34 @@ export function planAhorro(estado) {
     meta: suma(filas.map((f) => f.meta)),
     real: suma(filas.map((f) => f.real ?? 0)),
     diferencia: suma(filas.map((f) => f.diferencia ?? 0)),
+  };
+  return { filas, totales };
+}
+
+// Tablero de la pestaña «Mes»: todo lo del mes junto (pagos, extras, crucero y gastos personales).
+// controlMensual() sigue siendo el Excel tal cual; aquí se le suman el crucero y el gasto personal del plan.
+export function tablero(estado) {
+  const plan = new Map(planAhorro(estado).filas.map((f) => [f.id, f]));
+  const filas = controlMensual(estado).filas.map((f) => {
+    const p = plan.get(f.id); // los meses anteriores al plan no tienen crucero ni gasto personal
+    const crucero = p?.paraCrucero ?? 0;
+    const personal = p?.gastoPersonal ?? 0;
+    const cruceroPagado = p?.cruceroPagado ?? false;
+    const personalPagado = p?.personalPagado ?? false;
+    const gastos = f.total + crucero + personal;
+    const pagado = f.yaPagado + (cruceroPagado ? crucero : 0) + (personalPagado ? personal : 0);
+    return { ...f, enPlan: Boolean(p), crucero, cruceroPagado, personal, personalPagado, gastos, pagado, pendiente: gastos - pagado, libre: f.salario - gastos };
+  });
+  const sumar = (claves) => Object.fromEntries(claves.map((k) => [k, suma(filas.map((f) => f[k]))]));
+  const contar = (fn) => filas.filter(fn).length;
+  const totales = {
+    ...sumar(['salario', 'movil', 'abuelos', 'extras', 'extrasPendientes', 'total', 'saldo', 'crucero', 'personal', 'gastos', 'pagado', 'pendiente', 'libre']),
+    mesesMovilPagados: contar((f) => f.estadoMovil === 'Pagado'),
+    mesesAbuelosPagados: contar((f) => f.estadoAbuelos === 'Pagado'),
+    mesesPlan: contar((f) => f.enPlan),
+    cuotas: contar((f) => f.crucero > 0 || f.cruceroPagado),
+    cuotasPagadas: contar((f) => f.cruceroPagado),
+    mesesPersonalPagados: contar((f) => f.personalPagado),
   };
   return { filas, totales };
 }

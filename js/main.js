@@ -10,7 +10,7 @@ import * as config from './views/config.js';
 const vistas = [mes, ahorro, extras, crucero, config];
 const acciones = Object.assign({}, ...vistas.map((v) => v.acciones));
 const cambios = Object.assign({}, ...vistas.map((v) => v.cambios));
-const ui = { mesSel: null };
+const ui = { mesSel: null, total: false }; // total: la pestaña Mes muestra la suma de todos los meses
 const contenedor = document.getElementById('vista');
 
 const vistaActual = () => vistas.find((v) => v.id === location.hash.slice(1)) ?? mes;

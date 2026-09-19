@@ -2,7 +2,7 @@
 // Estrategia: se responde al instante con lo guardado y en segundo plano se baja la versión nueva.
 // AL PUBLICAR CAMBIOS: sube el número de CACHE. Así el teléfono baja todos los archivos juntos, los
 // instala completos y recarga la app sola; sin subirlo, los cambios llegan archivo por archivo.
-const CACHE = 'gastos-v2';
+const CACHE = 'gastos-v3';
 const ARCHIVOS = [
   './',
   'index.html',

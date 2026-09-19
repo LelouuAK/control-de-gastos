@@ -1,8 +1,9 @@
-// Hoja «Control Mensual»: por cada mes, salario, plan móvil, abuelos, extras y saldo.
+// Pestaña «Mes»: el tablero de un mes (o la suma de todos). Sale de la hoja «Control Mensual» y suma
+// el crucero y el gasto personal de la hoja «Plan de Ahorro» para ver todo lo del mes en un solo lugar.
 import { html, aviso } from '../ui.js';
-import { controlMensual, extrasDelMes } from '../calc.js';
+import { tablero, extrasDelMes } from '../calc.js';
 import { cambiar, obtener } from '../store.js';
-import { dinero, nombreMes, nombreMesAnio, abreviaturaMes, mesDeHoy, mesSiguiente, diasEnMes } from '../format.js';
+import { dinero, nombreMes, nombreMesAnio, abreviaturaMes, mesDeHoy, mesSiguiente, diasEnMes, hoyISO, uid } from '../format.js';
 import { hacerRespaldo, respaldoPendiente } from '../respaldo.js';
 import { filaExtra } from './extras.js';
 
@@ -11,6 +12,7 @@ export const titulo = 'Control mensual';
 
 const guion = { guionSiCero: true };
 const enMinuscula = (mesId) => nombreMes(mesId).toLowerCase();
+const avance = (hechos, total, uno, varios) => `${hechos} de ${total} ${total === 1 ? uno : varios}`;
 
 function vencido(mesId, dia) {
   const actual = mesDeHoy();
@@ -18,31 +20,40 @@ function vencido(mesId, dia) {
   return new Date().getDate() > Math.min(dia, diasEnMes(mesId));
 }
 
-function filaPago(nombre, campo, monto, estado, dia, mesId) {
-  const tarde = monto > 0 && estado === 'Pendiente' && vencido(mesId, dia);
+// Un pago fijo vence si sigue Pendiente y su día del mes ya pasó.
+const vence = (mesId, dia, estado, monto) => monto > 0 && estado === 'Pendiente' && vencido(mesId, dia);
+const notaPago = (mesId, dia, estado, monto) => (vence(mesId, dia, estado, monto) ? `Venció el día ${dia}` : `Se paga el día ${dia}`);
+const notaExtras = (pendientes, total) => (total > 0 ? (pendientes > 0 ? `${dinero(pendientes)} pendiente` : 'Todos pagados') : '');
+
+// Fila con monto y selector Pendiente / Pagado. `accion` y `campo` dicen a qué dato se aplica el cambio.
+function filaEstado({ nombre, nota, alerta = false, monto, estado, accion, campo = '' }) {
   const boton = (valor, clase) =>
-    html`<button type="button" class="${clase}" aria-pressed="${String(estado === valor)}" data-accion="mes-estado" data-campo="${campo}" data-valor="${valor}">${valor}</button>`;
+    html`<button type="button" class="${clase}" aria-pressed="${String(estado === valor)}" data-accion="${accion}" data-campo="${campo}" data-valor="${valor}">${valor}</button>`;
   return html`
     <div class="fila fila-pago">
-      <div class="et">${nombre}<small class="${tarde ? 'vence' : ''}">${tarde ? `Venció el día ${dia}` : `Se paga el día ${dia}`}</small></div>
+      <div class="et">${nombre}<small class="${alerta ? 'vence' : ''}">${nota}</small></div>
       <div class="val">${dinero(monto)}</div>
       <div class="seg" role="group" aria-label="Estado de ${nombre}">${boton('Pendiente', 'pend')}${boton('Pagado', 'pag')}</div>
     </div>`;
 }
 
-// Cómo se reparte el salario del mes: ya pagado, por pagar y libre.
-function cinta(f) {
-  const libre = Math.max(f.saldo, 0);
-  const base = Math.max(f.salario, f.total);
-  const partes = [['pag', f.yaPagado], ['por', f.porPagar], ['libre', libre]].filter(([, v]) => v > 0);
+// Fila de solo lectura (montos sueltos, subtotales y la vista Total). `total` la marca como resultado.
+const fila = (nombre, valor, { nota = '', total = false, opciones } = {}) =>
+  html`<div class="fila ${total && 'total'}"><span class="et">${nombre}${nota && html`<small>${nota}</small>`}</span><span class="val ${valor < 0 ? 'neg' : ''}">${dinero(valor, opciones)}</span></div>`;
+
+// Cómo se reparte el salario: ya pagado, por pagar y lo que te queda.
+function cinta(d) {
+  const libre = Math.max(d.libre, 0);
+  const base = Math.max(d.salario, d.gastos);
+  const partes = [['pag', d.pagado], ['por', d.pendiente], ['libre', libre]].filter(([, v]) => v > 0.005);
   return html`
-    <div class="cinta" role="img" aria-label="Del salario: ${dinero(f.yaPagado)} ya pagado, ${dinero(f.porPagar)} por pagar, ${dinero(libre)} libre">
+    <div class="cinta" role="img" aria-label="Del salario: ${dinero(d.pagado)} ya pagado, ${dinero(d.pendiente)} por pagar, ${dinero(libre)} te queda">
       ${base > 0 && partes.map(([clase, v]) => html`<i class="${clase}" style="flex-grow:${v / base}"></i>`)}
     </div>
     <ul class="leyenda">
-      <li><span><i class="pag"></i>Ya pagado</span><b>${dinero(f.yaPagado)}</b></li>
-      <li><span><i class="por"></i>Por pagar</span><b>${dinero(f.porPagar)}</b></li>
-      <li><span><i class="libre"></i>Libre</span><b>${dinero(libre)}</b></li>
+      <li><span><i class="pag"></i>Ya pagado</span><b>${dinero(d.pagado)}</b></li>
+      <li><span><i class="por"></i>Por pagar</span><b>${dinero(d.pendiente, guion)}</b></li>
+      <li><span><i class="libre"></i>Te queda</span><b>${dinero(libre)}</b></li>
     </ul>`;
 }
 
@@ -66,55 +77,91 @@ const avisoRespaldo = (estado) =>
     <div class="grupo"><button type="button" class="fila accion" data-accion="respaldar">Respaldar ahora</button></div>
   </section>`;
 
-const filaTotal = (nombre, valor, opciones) => html`<div class="fila"><span class="et">${nombre}</span><span class="val">${dinero(valor, opciones)}</span></div>`;
+// Un mes: cada pago con su estado, y los subtotales que llevan al ahorro.
+function detalleMes(estado, f) {
+  const extras = extrasDelMes(estado, f.id);
+  const mes = enMinuscula(f.id);
+  const mostrarCrucero = f.crucero > 0 || f.cruceroPagado;
+  return html`
+    <h2 class="grupo-t">Pagos de ${mes}</h2>
+    <div class="grupo">
+      ${fila('Salario', f.salario)}
+      ${filaEstado({ nombre: 'Plan móvil', nota: notaPago(f.id, estado.config.movilDia, f.estadoMovil, f.movil), alerta: vence(f.id, estado.config.movilDia, f.estadoMovil, f.movil), monto: f.movil, estado: f.estadoMovil, accion: 'mes-estado', campo: 'movil' })}
+      ${filaEstado({ nombre: 'Abuelos', nota: notaPago(f.id, estado.config.abuelosDia, f.estadoAbuelos, f.abuelos), alerta: vence(f.id, estado.config.abuelosDia, f.estadoAbuelos, f.abuelos), monto: f.abuelos, estado: f.estadoAbuelos, accion: 'mes-estado', campo: 'abuelos' })}
+      ${fila('Extras', f.extras, { opciones: guion, nota: notaExtras(f.extrasPendientes, f.extras) })}
+      ${extras.map((x) => filaExtra(x, true))}
+      <button type="button" class="fila accion" data-accion="extra-nuevo">+ Anotar extra</button>
+      ${fila('Saldo libre', f.saldo, { total: true, nota: 'Salario menos pagos y extras' })}
+    </div>
+
+    ${f.enPlan && (mostrarCrucero || f.personal > 0) &&
+    html`<h2 class="grupo-t">Crucero y gastos personales</h2>
+      <div class="grupo">
+        ${mostrarCrucero && filaEstado({ nombre: 'Crucero', nota: `Cuota de ${mes}`, monto: f.crucero, estado: f.cruceroPagado ? 'Pagado' : 'Pendiente', accion: 'mes-crucero' })}
+        ${f.personal > 0 && filaEstado({ nombre: 'Gastos personales', nota: 'Estimado del mes', monto: f.personal, estado: f.personalPagado ? 'Pagado' : 'Pendiente', accion: 'mes-personal' })}
+        ${fila('Ahorro del mes', f.libre, { total: true, nota: 'Saldo libre menos crucero y gastos personales' })}
+      </div>`}
+  `;
+}
+
+// La suma de todos los meses, con la misma forma que un mes (sin selectores: se cambian mes por mes).
+function detalleTotal(t, meses) {
+  return html`
+    <h2 class="grupo-t">Pagos de todos los meses</h2>
+    <div class="grupo">
+      ${fila('Salario', t.salario)}
+      ${fila('Plan móvil', t.movil, { nota: avance(t.mesesMovilPagados, meses, 'mes pagado', 'meses pagados') })}
+      ${fila('Abuelos', t.abuelos, { nota: avance(t.mesesAbuelosPagados, meses, 'mes pagado', 'meses pagados') })}
+      ${fila('Extras', t.extras, { opciones: guion, nota: notaExtras(t.extrasPendientes, t.extras) })}
+      ${fila('Saldo libre', t.saldo, { total: true, nota: 'Salario menos pagos y extras' })}
+    </div>
+    ${t.mesesPlan > 0 &&
+    html`<h2 class="grupo-t">Crucero y gastos personales</h2>
+      <div class="grupo">
+        ${t.cuotas > 0 && fila('Crucero', t.crucero, { nota: avance(t.cuotasPagadas, t.cuotas, 'cuota pagada', 'cuotas pagadas') })}
+        ${t.personal > 0 && fila('Gastos personales', t.personal, { nota: avance(t.mesesPersonalPagados, t.mesesPlan, 'mes pagado', 'meses pagados') })}
+        ${fila('Te queda en total', t.libre, { total: true, nota: t.mesesPlan < meses ? 'Incluye los meses anteriores al plan de ahorro' : 'Saldo libre menos crucero y gastos personales' })}
+      </div>`}
+  `;
+}
 
 export function render(estado, ui) {
-  const { filas, totales: t } = controlMensual(estado);
+  const { filas, totales: t } = tablero(estado);
   const f = filas.find((x) => x.id === ui.mesSel) ?? filas.at(-1);
-  const extras = extrasDelMes(estado, f.id);
+  const d = ui.total ? t : f; // lo que alimenta la cifra grande y la cinta
   const anioActual = mesDeHoy().slice(0, 4);
+  const etiqueta = ui.total ? 'Te queda en total' : `Te queda en ${enMinuscula(f.id)}`;
   return html`
     <h1 class="titulo">${titulo}</h1>
     ${avisoInicial(estado)}${avisoRespaldo(estado)}
     <nav class="meses" aria-label="Mes">
-      ${filas.map((m) => html`<button type="button" class="chip" aria-current="${String(m.id === f.id)}" data-accion="mes-sel" data-id="${m.id}">${abreviaturaMes(m.id)}${m.id.slice(0, 4) !== anioActual ? ` ’${m.id.slice(2, 4)}` : ''}</button>`)}
+      <button type="button" class="chip total" aria-current="${String(ui.total)}" data-accion="mes-total">Total</button>
+      ${filas.map((m) => html`<button type="button" class="chip" aria-current="${String(!ui.total && m.id === f.id)}" data-accion="mes-sel" data-id="${m.id}">${abreviaturaMes(m.id)}${m.id.slice(0, 4) !== anioActual ? ` ’${m.id.slice(2, 4)}` : ''}</button>`)}
       <button type="button" class="chip mas" data-accion="mes-mas">+ Mes</button>
     </nav>
     <section class="hero">
-      <p class="hero-et">Saldo libre de ${enMinuscula(f.id)}</p>
-      <p class="hero-num ${f.saldo < 0 ? 'neg' : ''}">${dinero(f.saldo)}</p>
-      ${cinta(f)}
+      <p class="hero-et">${etiqueta}</p>
+      <p class="hero-num ${d.libre < 0 ? 'neg' : ''}">${dinero(d.libre)}</p>
+      ${cinta(d)}
     </section>
-
-    <h2 class="grupo-t">Pagos de ${enMinuscula(f.id)}</h2>
-    <div class="grupo">
-      ${filaTotal('Salario', f.salario)}
-      ${filaPago('Plan móvil', 'movil', f.movil, f.estadoMovil, estado.config.movilDia, f.id)}
-      ${filaPago('Abuelos', 'abuelos', f.abuelos, f.estadoAbuelos, estado.config.abuelosDia, f.id)}
-      <div class="fila"><span class="et">Extras${f.extras > 0 && html`<small>${f.extrasPendientes > 0 ? `${dinero(f.extrasPendientes)} pendiente` : 'Todos pagados'}</small>`}</span><span class="val">${dinero(f.extras, guion)}</span></div>
-      ${extras.map((x) => filaExtra(x, true))}
-      <button type="button" class="fila accion" data-accion="extra-nuevo">+ Anotar extra</button>
-      <div class="fila total"><span class="et">Total gastos</span><span class="val">${dinero(f.total)}</span></div>
-    </div>
-
-    <h2 class="grupo-t">Total de todos los meses</h2>
-    <div class="grupo">
-      ${filaTotal('Salario', t.salario)}${filaTotal('Plan móvil', t.movil)}${filaTotal('Abuelos', t.abuelos)}${filaTotal('Extras', t.extras, guion)}
-      <div class="fila total"><span class="et">Total gastos</span><span class="val">${dinero(t.total)}</span></div>
-      ${filaTotal('Saldo libre', t.saldo)}${filaTotal('Ya pagado', t.yaPagado)}${filaTotal('Por pagar', t.porPagar, guion)}
-    </div>
-    <p class="nota">Por pagar es lo que sigue en Pendiente: plan móvil, abuelos y extras.</p>
-    ${f.id === filas.at(-1).id && filas.length > 1 && html`<button type="button" class="enlace peligro" data-accion="mes-quitar">Quitar ${enMinuscula(f.id)}</button>`}
+    ${ui.total ? detalleTotal(t, filas.length) : detalleMes(estado, f)}
+    <p class="nota">Por pagar es lo que sigue en Pendiente: pagos fijos, extras, crucero y gastos personales.</p>
+    ${!ui.total && f.id === filas.at(-1).id && filas.length > 1 && html`<button type="button" class="enlace peligro" data-accion="mes-quitar">Quitar ${enMinuscula(f.id)}</button>`}
   `;
 }
 
 export const acciones = {
+  'mes-total': (el, ui) => {
+    ui.total = true;
+  },
   'mes-sel': (el, ui) => {
+    ui.total = false;
     ui.mesSel = el.dataset.id;
   },
   'mes-mas': (el, ui) => {
     const nuevo = mesSiguiente(obtener().meses.at(-1).id);
-    cambiar((e) => e.meses.push({ id: nuevo, movil: 'Pendiente', abuelos: 'Pendiente', ahorroReal: null }));
+    cambiar((e) => e.meses.push({ id: nuevo, movil: 'Pendiente', abuelos: 'Pendiente', personal: 'Pendiente', ahorroReal: null }));
+    ui.total = false;
     ui.mesSel = nuevo;
     aviso(`${nombreMesAnio(nuevo)} agregado`);
   },
@@ -122,11 +169,38 @@ export const acciones = {
     cambiar((e) => {
       e.meses.find((m) => m.id === ui.mesSel)[el.dataset.campo] = el.dataset.valor;
     }),
+  'mes-personal': (el, ui) =>
+    cambiar((e) => {
+      e.meses.find((m) => m.id === ui.mesSel).personal = el.dataset.valor;
+    }),
+  // Pagar la cuota del crucero registra el abono de ese mes; volver a Pendiente lo quita. Así Mes y Crucero siempre coinciden.
+  'mes-crucero': (el, ui) => {
+    const estado = obtener();
+    const f = tablero(estado).filas.find((x) => x.id === ui.mesSel);
+    const pagar = el.dataset.valor === 'Pagado';
+    if (pagar === f.cruceroPagado) return false;
+    const mes = enMinuscula(ui.mesSel);
+    if (pagar) {
+      const abono = { id: uid(), fecha: hoyISO(), monto: Math.round(f.crucero * 100) / 100, nota: '', mes: ui.mesSel };
+      cambiar((e) => e.abonos.push(abono));
+      aviso(`Cuota de ${mes} pagada: se registró el abono`, { accion: 'Deshacer', alAccion: () => cambiar((e) => { e.abonos = e.abonos.filter((a) => a.id !== abono.id); }) });
+    } else {
+      const quitados = estado.abonos.filter((a) => a.mes === ui.mesSel);
+      cambiar((e) => {
+        e.abonos = e.abonos.filter((a) => a.mes !== ui.mesSel);
+      });
+      aviso(`Cuota de ${mes} pendiente: se quitó el abono`, { accion: 'Deshacer', alAccion: () => cambiar((e) => e.abonos.push(...quitados)) });
+    }
+  },
   'mes-quitar': (el, ui) => {
     const estado = obtener();
     const mes = estado.meses.find((m) => m.id === ui.mesSel);
     if (extrasDelMes(estado, mes.id).length) {
       aviso('Este mes tiene extras. Bórralos primero.');
+      return false;
+    }
+    if (estado.abonos.some((a) => a.mes === mes.id)) {
+      aviso('Este mes tiene una cuota del crucero pagada. Quítala primero.');
       return false;
     }
     cambiar((e) => {

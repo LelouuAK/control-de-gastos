@@ -2,7 +2,7 @@
 import { html, abrirHoja, aviso, campo, entradaMonto } from '../ui.js';
 import { crucero } from '../calc.js';
 import { cambiar, obtener } from '../store.js';
-import { dinero, fechaCorta, hoyISO, numEntrada, parseMonto, uid } from '../format.js';
+import { dinero, fechaCorta, hoyISO, mesDeHoy, nombreMes, numEntrada, parseMonto, uid } from '../format.js';
 
 export const id = 'crucero';
 export const titulo = 'Crucero';
@@ -29,6 +29,9 @@ function ruta(avance) {
     </svg>`;
 }
 
+// «Cuota de septiembre» si el abono está ligado a un mes, seguido de la nota del usuario.
+const notaAbono = (a) => [a.mes && `Cuota de ${nombreMes(a.mes).toLowerCase()}`, a.nota].filter(Boolean).join('. ');
+
 const fila = (nombre, valor, extra = '') => html`<div class="fila ${extra}"><span class="et">${nombre}</span><span class="val">${valor}</span></div>`;
 
 export function render(estado) {
@@ -47,24 +50,33 @@ export function render(estado) {
     <h2 class="grupo-t">Seguimiento del faltante</h2>
     <div class="grupo">
       ${fila('Faltante inicial', dinero(c.inicial))}${fila('Total abonado', dinero(c.abonado, { guionSiCero: true }))}${fila('Faltante actual', dinero(c.actual), 'total')}
-      <div class="fila"><span class="et">Meses restantes para pagar<small>Se cambia en <a href="#config">Config</a></small></span><span class="val">${c.meses}</span></div>
+      <div class="fila"><span class="et">Meses restantes para pagar<small>${c.mesesPagados} de ${c.meses} cuotas pagadas. El total se cambia en <a href="#config">Config</a></small></span><span class="val">${c.restantes}</span></div>
       ${fila('Abono sugerido por mes', dinero(c.sugerido), 'total')}
     </div>
 
     <h2 class="grupo-t">Abonos realizados</h2>
     ${abonos.length
-      ? html`<div class="grupo">${abonos.map((a) => html`<button type="button" class="fila" data-accion="abono-editar" data-id="${a.id}"><span class="et">${fechaCorta(a.fecha)}${a.nota && html`<small>${a.nota}</small>`}</span><span class="val">${dinero(a.monto)}</span></button>`)}</div>`
+      ? html`<div class="grupo">${abonos.map((a) => html`<button type="button" class="fila" data-accion="abono-editar" data-id="${a.id}"><span class="et">${fechaCorta(a.fecha)}${notaAbono(a) && html`<small>${notaAbono(a)}</small>`}</span><span class="val">${dinero(a.monto)}</span></button>`)}</div>`
       : html`<p class="vacio">Aún no registras abonos. Cada abono baja el faltante actual.</p>`}
     <button type="button" class="fab" data-accion="abono-nuevo">+ Registrar abono</button>
   `;
 }
 
 function abrirHojaAbono(idAbono) {
-  const existente = idAbono ? obtener().abonos.find((a) => a.id === idAbono) : null;
+  const estado = obtener();
+  const existente = idAbono ? estado.abonos.find((a) => a.id === idAbono) : null;
+  const mesesPlan = estado.meses.filter((m) => m.id >= estado.config.ahorroDesde);
+  // Un abono nuevo se propone como la cuota del mes en curso, si es del plan y aún no tiene cuota pagada.
+  const hoy = mesDeHoy();
+  const cuotaInicial = existente ? existente.mes : mesesPlan.some((m) => m.id === hoy) && !estado.abonos.some((a) => a.mes === hoy) ? hoy : null;
   abrirHoja({
     titulo: existente ? 'Editar abono' : 'Nuevo abono',
     cuerpo: html`<div class="grupo">
       ${campo('Fecha', html`<input name="fecha" type="date" value="${existente?.fecha ?? hoyISO()}">`)}
+      ${campo(
+        'Cuota de',
+        html`<select name="mes"><option value="">Ninguna</option>${mesesPlan.map((m) => html`<option value="${m.id}" ${m.id === cuotaInicial && 'selected'}>${nombreMes(m.id)} ${m.id.slice(0, 4)}</option>`)}</select>`,
+      )}
       ${campo('Monto', entradaMonto('monto', existente ? numEntrada(existente.monto) : ''))}
       ${campo('Nota', html`<input name="nota" type="text" autocomplete="off" enterkeyhint="done" placeholder="Opcional" value="${existente?.nota ?? ''}">`)}
     </div>`,
@@ -74,9 +86,10 @@ function abrirHojaAbono(idAbono) {
       if (!fecha) return 'Elige la fecha del abono.';
       if (!(monto > 0)) return 'Escribe un monto mayor que cero.';
       const nota = String(datos.get('nota')).trim();
+      const mes = String(datos.get('mes')) || null; // la cuota del mes a la que corresponde, si se eligió
       cambiar((e) => {
-        if (existente) Object.assign(e.abonos.find((a) => a.id === existente.id), { fecha, monto, nota });
-        else e.abonos.push({ id: uid(), fecha, monto, nota });
+        if (existente) Object.assign(e.abonos.find((a) => a.id === existente.id), { fecha, monto, nota, mes });
+        else e.abonos.push({ id: uid(), fecha, monto, nota, mes });
       });
       aviso('Abono guardado');
     },

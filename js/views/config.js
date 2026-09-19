@@ -44,7 +44,7 @@ export function render(estado) {
     <h2 class="grupo-t">Crucero</h2>
     <div class="grupo">
       ${fila('Faltante inicial', '', entrada('cruceroFaltante', numEntrada(c.cruceroFaltante)))}
-      ${fila('Meses para terminar de pagar', 'Cámbialo si ya pasó un mes y sigues pagando', entrada('cruceroMeses', c.cruceroMeses, 'numeric'))}
+      ${fila('Meses para terminar de pagar', 'Cuenta desde el primer mes del plan. Cada cuota pagada baja los meses restantes sola.', entrada('cruceroMeses', c.cruceroMeses, 'numeric'))}
     </div>
 
     <h2 class="grupo-t">Plan de ahorro</h2>

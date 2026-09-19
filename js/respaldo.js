@@ -61,6 +61,7 @@ export function leerRespaldo(contenido) {
     id: patron(texto(m?.id, 'mes'), ES_MES, 'mes'),
     movil: elegir(m.movil, ESTADOS, 'estado del plan móvil'),
     abuelos: elegir(m.abuelos, ESTADOS, 'estado de abuelos'),
+    personal: m.personal === undefined ? 'Pendiente' : elegir(m.personal, ESTADOS, 'estado del gasto personal'), // los respaldos v1 y v2 no lo traen
     ahorroReal: m.ahorroReal == null ? null : numero(m.ahorroReal, 'ahorro real'),
   }));
   if (!meses.length) throw new Error('El respaldo no tiene ningún mes.');
@@ -85,6 +86,7 @@ export function leerRespaldo(contenido) {
     fecha: patron(texto(a.fecha, 'fecha del abono'), ES_FECHA, 'fecha del abono'),
     monto: numero(a.monto, 'monto del abono'),
     nota: typeof a.nota === 'string' ? a.nota : '',
+    mes: a.mes == null ? null : patron(texto(a.mes, 'cuota del abono'), ES_MES, 'cuota del abono'), // los respaldos v1 y v2 no lo traen
   }));
 
   const ahora = new Date().toISOString();

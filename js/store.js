@@ -56,6 +56,11 @@ export function migrar(datos) {
   if (datos.version > VERSION_DATOS) throw new Error('Los datos guardados son de una versión más nueva de la app.');
   // v1 → v2: los extras no tenían estado y el Excel los contaba como ya pagados.
   if (datos.version < 2) for (const x of datos.extras) x.estado ??= 'Pagado';
+  // v2 → v3: el gasto personal de cada mes parte como pendiente; los abonos existentes no están ligados a ningún mes.
+  if (datos.version < 3) {
+    for (const m of datos.meses) m.personal ??= 'Pendiente';
+    for (const a of datos.abonos) a.mes ??= null;
+  }
   datos.version = VERSION_DATOS;
   return datos;
 }

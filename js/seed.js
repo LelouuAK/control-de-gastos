@@ -7,7 +7,7 @@ export function datosNuevos() {
   const ahora = new Date().toISOString();
   const meses = [];
   for (let id = mesDeHoy(); meses.length < 4; id = mesSiguiente(id)) {
-    meses.push({ id, movil: 'Pendiente', abuelos: 'Pendiente', ahorroReal: null });
+    meses.push({ id, movil: 'Pendiente', abuelos: 'Pendiente', personal: 'Pendiente', ahorroReal: null });
   }
   return {
     version: VERSION_DATOS,
