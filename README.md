@@ -121,3 +121,7 @@ Se publica desde la rama `main`, carpeta raíz. El archivo `.nojekyll` evita que
 - El salario, el plan móvil y los abuelos son un solo valor para todos los meses: cambiarlos modifica también los meses pasados.
 - El gasto personal es un estimado; «Pagado» solo significa que ya lo gastaste este mes.
 - La pestaña Mes en modo **Total** incluye los meses anteriores al plan de ahorro, que no llevan crucero ni gasto personal.
+
+## Licencia
+
+[MIT](LICENSE): puedes usar, copiar, modificar y distribuir el código, conservando el aviso de copyright. Se ofrece tal cual, sin garantía.
