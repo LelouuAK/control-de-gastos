@@ -11,9 +11,12 @@ export const extrasDelMes = (estado, mesId) => estado.extras.filter((x) => x.mes
 export function controlMensual(estado) {
   const { salario, movil, abuelos } = estado.config;
   const filas = estado.meses.map((m) => {
-    const extras = suma(extrasDelMes(estado, m.id).map((x) => x.monto));
-    const total = movil + abuelos + extras; // H = C + E + G
-    const yaPagado = (m.movil === 'Pagado' ? movil : 0) + (m.abuelos === 'Pagado' ? abuelos : 0) + extras; // J
+    const delMes = extrasDelMes(estado, m.id);
+    const extras = suma(delMes.map((x) => x.monto));
+    const extrasPendientes = suma(delMes.filter((x) => x.estado === 'Pendiente').map((x) => x.monto));
+    const total = movil + abuelos + extras; // H = C + E + G: un extra pendiente también es gasto del mes
+    // J: en el Excel todos los extras contaban como pagados; ahora solo los que están en Pagado.
+    const yaPagado = (m.movil === 'Pagado' ? movil : 0) + (m.abuelos === 'Pagado' ? abuelos : 0) + (extras - extrasPendientes);
     return {
       id: m.id,
       salario, // B
@@ -21,7 +24,8 @@ export function controlMensual(estado) {
       estadoMovil: m.movil, // D
       abuelos, // E
       estadoAbuelos: m.abuelos, // F
-      extras, // G: los extras cuentan como ya pagados
+      extras, // G
+      extrasPendientes,
       total,
       saldo: salario - total, // I = B - H
       yaPagado,

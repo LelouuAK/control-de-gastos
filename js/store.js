@@ -51,9 +51,12 @@ export const alFallarGuardado = (fn) => {
 };
 export const hayGuardado = () => guardadoDisponible;
 
-// Aquí irán las migraciones cuando cambie la forma de los datos (VERSION_DATOS).
-function migrar(datos) {
+// Pone al día datos guardados con una versión anterior (VERSION_DATOS).
+export function migrar(datos) {
   if (datos.version > VERSION_DATOS) throw new Error('Los datos guardados son de una versión más nueva de la app.');
+  // v1 → v2: los extras no tenían estado y el Excel los contaba como ya pagados.
+  if (datos.version < 2) for (const x of datos.extras) x.estado ??= 'Pagado';
+  datos.version = VERSION_DATOS;
   return datos;
 }
 
@@ -65,8 +68,9 @@ function persistir() {
 export async function iniciar() {
   try {
     const guardado = await leer();
+    const versionAntes = guardado?.version;
     estado = guardado ? migrar(guardado) : datosNuevos();
-    if (!guardado) persistir();
+    if (!guardado || versionAntes !== VERSION_DATOS) persistir();
   } catch (err) {
     guardadoDisponible = false; // p. ej. el navegador bloquea el almacenamiento: la app funciona, pero no guarda
     estado = datosNuevos();

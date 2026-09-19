@@ -70,7 +70,14 @@ export function leerRespaldo(contenido) {
   const extras = (Array.isArray(d.extras) ? d.extras : []).map((x) => {
     const mes = patron(texto(x?.mes, 'mes del extra'), ES_MES, 'mes del extra');
     if (!meses.some((m) => m.id === mes)) throw new Error(`Un extra apunta a un mes que no existe (${mes}).`);
-    return { id: texto(x.id, 'id del extra'), mes, concepto: texto(x.concepto, 'concepto'), monto: numero(x.monto, 'monto del extra'), creado: typeof x.creado === 'string' ? x.creado : new Date().toISOString() };
+    return {
+      id: texto(x.id, 'id del extra'),
+      mes,
+      concepto: texto(x.concepto, 'concepto'),
+      monto: numero(x.monto, 'monto del extra'),
+      estado: x.estado === undefined ? 'Pagado' : elegir(x.estado, ESTADOS, 'estado del extra'), // los respaldos v1 no lo traen
+      creado: typeof x.creado === 'string' ? x.creado : new Date().toISOString(),
+    };
   });
 
   const abonos = (Array.isArray(d.abonos) ? d.abonos : []).map((a) => ({

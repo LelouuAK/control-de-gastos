@@ -122,6 +122,22 @@ label.fila, summary.fila { cursor: pointer; }
 .seg button[aria-pressed='true'].pend { background: var(--warn-bg); color: var(--warn); }
 .seg button[aria-pressed='true'].pag { background: var(--ok-bg); color: var(--ok); }
 
+/* Extras con estado: el texto edita, la etiqueta cambia Pagado/Pendiente */
+.fila-extra .et { align-self: stretch; margin-block: -10px; padding: 10px 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; }
+button.etq { position: relative; flex: none; width: 92px; border: 0; font-family: inherit; }
+button.etq::after { content: ''; position: absolute; inset: -10px -4px; }
+.etq.warn { background: var(--warn-bg); color: var(--warn); }
+.leyenda.dos { grid-template-columns: repeat(2, 1fr); }
+
+/* Estado Pagado / Pendiente como opciones (hojas de captura) */
+.seg label { position: relative; display: block; }
+.seg label input { position: absolute; inset: 0; margin: 0; opacity: 0; }
+.seg label span { display: flex; align-items: center; justify-content: center; min-height: 40px; border-radius: 8px; color: var(--ink-2); font-weight: 500; }
+.seg label.pend input:checked + span { background: var(--warn-bg); color: var(--warn); }
+.seg label.pag input:checked + span { background: var(--ok-bg); color: var(--ok); }
+.seg label input:focus-visible + span { outline: 2px solid var(--sea); }
+.campo .seg { flex: 0 0 230px; margin-left: auto; }
+
 /* Campos dentro de una fila */
 .fila input.num, .fila select {
   flex: none; width: 7.5em; padding: 9px 12px; border: 0; border-radius: 10px;

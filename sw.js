@@ -1,7 +1,8 @@
 // Service worker: deja la app funcionando sin internet.
-// Estrategia: se responde al instante con lo guardado y en segundo plano se baja la versión nueva,
-// así los cambios que publiques aparecen la siguiente vez que abras la app.
-const CACHE = 'gastos-v1';
+// Estrategia: se responde al instante con lo guardado y en segundo plano se baja la versión nueva.
+// AL PUBLICAR CAMBIOS: sube el número de CACHE. Así el teléfono baja todos los archivos juntos, los
+// instala completos y recarga la app sola; sin subirlo, los cambios llegan archivo por archivo.
+const CACHE = 'gastos-v2';
 const ARCHIVOS = [
   './',
   'index.html',
@@ -26,7 +27,8 @@ const ARCHIVOS = [
 ];
 
 self.addEventListener('install', (ev) => {
-  ev.waitUntil(caches.open(CACHE).then((c) => c.addAll(ARCHIVOS)));
+  // cache: 'reload' evita que se guarden copias viejas que el navegador tenga en su caché HTTP
+  ev.waitUntil(caches.open(CACHE).then((c) => Promise.all(ARCHIVOS.map((a) => c.add(new Request(a, { cache: 'reload' }))))));
   self.skipWaiting();
 });
 

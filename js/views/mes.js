@@ -4,6 +4,7 @@ import { controlMensual, extrasDelMes } from '../calc.js';
 import { cambiar, obtener } from '../store.js';
 import { dinero, nombreMes, nombreMesAnio, abreviaturaMes, mesDeHoy, mesSiguiente, diasEnMes } from '../format.js';
 import { hacerRespaldo, respaldoPendiente } from '../respaldo.js';
+import { filaExtra } from './extras.js';
 
 export const id = 'mes';
 export const titulo = 'Control mensual';
@@ -90,8 +91,8 @@ export function render(estado, ui) {
       ${filaTotal('Salario', f.salario)}
       ${filaPago('Plan móvil', 'movil', f.movil, f.estadoMovil, estado.config.movilDia, f.id)}
       ${filaPago('Abuelos', 'abuelos', f.abuelos, f.estadoAbuelos, estado.config.abuelosDia, f.id)}
-      <div class="fila"><span class="et">Extras<small>Se cuentan como ya pagados</small></span><span class="val">${dinero(f.extras, guion)}</span></div>
-      ${extras.map((x) => html`<button type="button" class="fila sub" data-accion="extra-editar" data-id="${x.id}"><span class="et">${x.concepto}</span><span class="val">${dinero(x.monto)}</span></button>`)}
+      <div class="fila"><span class="et">Extras${f.extras > 0 && html`<small>${f.extrasPendientes > 0 ? `${dinero(f.extrasPendientes)} pendiente` : 'Todos pagados'}</small>`}</span><span class="val">${dinero(f.extras, guion)}</span></div>
+      ${extras.map((x) => filaExtra(x, true))}
       <button type="button" class="fila accion" data-accion="extra-nuevo">+ Anotar extra</button>
       <div class="fila total"><span class="et">Total gastos</span><span class="val">${dinero(f.total)}</span></div>
     </div>
@@ -102,7 +103,7 @@ export function render(estado, ui) {
       <div class="fila total"><span class="et">Total gastos</span><span class="val">${dinero(t.total)}</span></div>
       ${filaTotal('Saldo libre', t.saldo)}${filaTotal('Ya pagado', t.yaPagado)}${filaTotal('Por pagar', t.porPagar, guion)}
     </div>
-    <p class="nota">Por pagar es el plan móvil y/o los abuelos que siguen en Pendiente.</p>
+    <p class="nota">Por pagar es lo que sigue en Pendiente: plan móvil, abuelos y extras.</p>
     ${f.id === filas.at(-1).id && filas.length > 1 && html`<button type="button" class="enlace peligro" data-accion="mes-quitar">Quitar ${enMinuscula(f.id)}</button>`}
   `;
 }

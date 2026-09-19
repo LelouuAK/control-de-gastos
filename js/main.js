@@ -54,4 +54,11 @@ suscribir(repintar);
 repintar();
 if (!hayGuardado()) aviso('Este navegador no permite guardar datos. Ábrela desde Safari o desde el ícono de inicio.', { fijo: true });
 
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+if ('serviceWorker' in navigator) {
+  // Si ya había una versión instalada y llega una nueva, recarga para usarla (salvo que haya una hoja abierta).
+  const habiaVersion = Boolean(navigator.serviceWorker.controller);
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (habiaVersion && !document.getElementById('hoja').open) location.reload();
+  });
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
