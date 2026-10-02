@@ -42,7 +42,7 @@ let cerrarHoja = () => {};
 
 // Hoja tipo iOS: Cancelar / título / Guardar. alGuardar(FormData) devuelve un texto de error o nada si todo salió bien.
 // alCerrar se llama una sola vez, sea cual sea la forma de cerrar (Guardar, Cancelar, franja oscura o gesto del sistema).
-export function abrirHoja({ titulo, cuerpo, guardar = 'Guardar', alGuardar, eliminar, alEliminar, alCerrar, compacta = false }) {
+export function abrirHoja({ titulo, cuerpo, guardar = 'Guardar', alGuardar, eliminar, alEliminar, alCerrar, alAbrir, compacta = false }) {
   const dlg = $('hoja');
   dlg.classList.toggle('compacta', compacta);
   let cerrada = false;
@@ -84,6 +84,7 @@ export function abrirHoja({ titulo, cuerpo, guardar = 'Guardar', alGuardar, elim
       alEliminar();
     }
   });
+  alAbrir?.(form);
   dlg.showModal();
 }
 
@@ -116,3 +117,26 @@ export const campo = (etiqueta, control) => html`<label class="campo"><span>${et
 
 export const entradaMonto = (nombre, valor = '') =>
   html`<input name="${nombre}" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done" placeholder="0.00" value="${valor}">`;
+
+// Opciones excluyentes como botones (radio con estilo de control segmentado).
+export const opciones = (nombre, lista, valor) =>
+  html`<div class="seg" role="radiogroup">${lista.map(([v, texto]) => html`<label><input type="radio" name="${nombre}" value="${v}" ${v === valor && 'checked'}><span>${texto}</span></label>`)}</div>`;
+
+export const opcionesSelect = (lista, valor) => lista.map(([v, texto]) => html`<option value="${v}" ${v === valor && 'selected'}>${texto}</option>`);
+
+// Encabezado de una pantalla interior: botón para volver y, opcionalmente, una acción a la derecha.
+export const cabecera = (titulo, { volver = '#ajustes', textoVolver = 'Ajustes', accion } = {}) => html`
+  <header class="cab-interior">
+    <a class="volver" href="${volver}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>${textoVolver}</a>
+    ${accion}
+  </header>
+  <h1 class="titulo">${titulo}</h1>`;
+
+// Barra de avance (0 a 1).
+export const barra = (avance, clase = '') => html`<div class="barra ${clase}" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(avance * 100)}"><i style="width:${Math.max(0, Math.min(1, avance)) * 100}%"></i></div>`;
+
+// Cuotas de una deuda como fichas: llenas las pagadas, vacías las que faltan (hasta 24; si son más, una barra).
+export function fichas(pagadas, total) {
+  if (!(total > 0) || total > 24) return barra(total > 0 ? pagadas / total : 0, 'deuda');
+  return html`<div class="fichas" role="img" aria-label="${pagadas} de ${total} cuotas pagadas">${Array.from({ length: total }, (_, i) => html`<i class="${i < pagadas ? 'llena' : ''}"></i>`)}</div>`;
+}

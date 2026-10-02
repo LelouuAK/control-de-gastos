@@ -1,13 +1,13 @@
 {
   "name": "Control de gastos",
   "short_name": "Gastos",
-  "description": "Control mensual de gastos, plan de ahorro y seguimiento del crucero.",
+  "description": "Gastos, ingresos, pagos fijos, deudas y objetivos de ahorro, con tus datos en tu teléfono.",
   "lang": "es",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#E9EFF3",
-  "theme_color": "#E9EFF3",
+  "background_color": "#0E2329",
+  "theme_color": "#0E2329",
   "icons": [
     { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
     { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" }

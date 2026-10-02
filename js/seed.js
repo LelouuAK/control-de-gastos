@@ -1,31 +1,38 @@
 // Datos de una instalación nueva. Van en blanco a propósito: la app se publica en internet
-// y tus cifras personales no deben viajar dentro del código. Tus datos se cargan con «Importar».
+// y tus cifras personales no deben viajar dentro del código. Tus datos se cargan con «Restaurar».
 import { VERSION_DATOS } from './version.js';
-import { mesDeHoy, mesSiguiente } from './format.js';
+
+// Categorías con las que arranca cualquier persona; se pueden renombrar, quitar o agregar más.
+export const CATEGORIAS_BASE = [
+  ['comida', 'gasto', 'Comida', '🛒'],
+  ['transporte', 'gasto', 'Transporte', '🚌'],
+  ['vivienda', 'gasto', 'Vivienda', '🏠'],
+  ['servicios', 'gasto', 'Servicios', '💡'],
+  ['telefono', 'gasto', 'Teléfono e internet', '📱'],
+  ['salud', 'gasto', 'Salud', '💊'],
+  ['ocio', 'gasto', 'Ocio', '🎬'],
+  ['compras', 'gasto', 'Compras', '🛍️'],
+  ['familia', 'gasto', 'Familia', '👪'],
+  ['personal', 'gasto', 'Personal', '🙂'],
+  ['deudas', 'gasto', 'Deudas', '🧾'],
+  ['otros', 'gasto', 'Otros gastos', '📦'],
+  ['salario', 'ingreso', 'Salario', '💼'],
+  ['extra', 'ingreso', 'Ingresos extra', '✨'],
+  ['otros-ingresos', 'ingreso', 'Otros ingresos', '💵'],
+].map(([id, tipo, nombre, icono]) => ({ id, tipo, nombre, icono }));
 
 export function datosNuevos() {
   const ahora = new Date().toISOString();
-  const meses = [];
-  for (let id = mesDeHoy(); meses.length < 4; id = mesSiguiente(id)) {
-    meses.push({ id, movil: 'Pendiente', abuelos: 'Pendiente', personal: 'Pendiente', ahorroReal: null });
-  }
   return {
     version: VERSION_DATOS,
-    config: {
-      salario: 0,
-      movil: 0,
-      movilDia: 1,
-      abuelos: 0,
-      abuelosDia: 1,
-      cruceroFaltante: 0,
-      cruceroMeses: 1,
-      gastoPersonal: 0,
-      metaAhorroPct: 0.2,
-      ahorroDesde: meses[0].id,
-    },
-    meses,
-    extras: [],
-    abonos: [],
+    ajustes: { nombre: '', moneda: 'USD', metaAhorroPct: 0.2 },
+    cuentas: [{ id: 'principal', nombre: 'Principal', tipo: 'banco', saldoInicial: 0, archivada: false }],
+    categorias: structuredClone(CATEGORIAS_BASE),
+    movimientos: [],
+    fijos: [],
+    deudas: [],
+    objetivos: [],
+    limites: [],
     meta: { creado: ahora, modificado: ahora, ultimoRespaldo: null },
   };
 }

@@ -1,43 +1,95 @@
 import { iniciar, obtener, suscribir, alFallarGuardado, hayGuardado } from './store.js';
 import { pintar, aviso, iniciarHoja } from './ui.js';
-import { mesPorDefecto } from './calc.js';
-import * as mes from './views/mes.js';
-import * as ahorro from './views/ahorro.js';
-import * as extras from './views/extras.js';
-import * as crucero from './views/crucero.js';
-import * as config from './views/config.js';
+import { mesDeHoy, usarMoneda } from './format.js';
+import * as inicio from './views/inicio.js';
+import * as movimientos from './views/movimientos.js';
+import * as analisis from './views/analisis.js';
+import * as ajustes from './views/ajustes.js';
+import * as cuentas from './views/cuentas.js';
+import * as categorias from './views/categorias.js';
+import * as deudas from './views/deudas.js';
+import * as objetivos from './views/objetivos.js';
+import * as fijos from './views/fijos.js';
+import * as planificacion from './views/planificacion.js';
+import * as centro from './views/centro.js';
+import { abrirMovimiento, abrirPendiente, registrarFijo } from './views/hojas.js';
 
-const vistas = [mes, ahorro, extras, crucero, config];
-const acciones = Object.assign({}, ...vistas.map((v) => v.acciones));
-const cambios = Object.assign({}, ...vistas.map((v) => v.cambios));
-const ui = { mesSel: null, total: false }; // total: la pestaña Mes muestra la suma de todos los meses
+const vistas = [inicio, movimientos, analisis, ajustes, cuentas, categorias, deudas, objetivos, fijos, planificacion, centro];
+
+// Acciones que se usan desde cualquier pantalla (botón + y las filas de movimientos y pendientes).
+const comunes = {
+  'mov-nuevo': () => {
+    abrirMovimiento();
+    return false;
+  },
+  'mov-editar': (el) => {
+    abrirMovimiento({ id: el.dataset.id });
+    return false;
+  },
+  'pend-abrir': (el) => {
+    abrirPendiente(el.dataset.id, el.dataset.fecha);
+    return false;
+  },
+  'pend-ya': (el) => {
+    registrarFijo(el.dataset.id, el.dataset.fecha);
+    return false;
+  },
+};
+const juntar = (clave) => Object.assign({}, ...vistas.map((v) => v[clave] ?? {}));
+const acciones = { ...comunes, ...juntar('acciones') };
+const cambios = juntar('cambios');
+const entradas = juntar('entradas');
+
+// Estado de la pantalla (no se guarda): mes elegido, filtros de Movimientos, etc.
+const ui = { mes: mesDeHoy(), modo: 'lista', buscar: '', tipo: 'todos', filtros: { cuenta: '', categoria: '' }, verFiltros: false, dia: null, tipoCategoria: 'gasto',
+  analisisTab: 'resumen', periodo: 'mes', cuentaAnalisis: '', anio: new Date().getFullYear(), modoComparar: 'mes' };
 const contenedor = document.getElementById('vista');
 
-const vistaActual = () => vistas.find((v) => v.id === location.hash.slice(1)) ?? mes;
+// Rutas: #inicio, #movimientos, #deudas, #deuda/<id>, #cuenta/<id>, #planificacion/limites…
+function rutaActual() {
+  const [base, param] = location.hash.slice(1).split('/');
+  const vista = vistas.find((v) => (v.rutas ?? [v.id]).includes(base)) ?? inicio;
+  return { vista, param: param ?? null };
+}
 
 function repintar() {
   const estado = obtener();
-  if (!estado.meses.some((m) => m.id === ui.mesSel)) ui.mesSel = mesPorDefecto(estado);
-  const vista = vistaActual();
-  pintar(contenedor, vista.render(estado, ui));
-  document.title = vista.titulo;
+  usarMoneda(estado.ajustes.moneda);
+  const { vista, param } = rutaActual();
+  // Si se estaba escribiendo en un campo (el buscador), se devuelve el foco tras repintar.
+  const foco = document.activeElement?.id && contenedor.contains(document.activeElement) ? document.activeElement : null;
+  const cursor = foco?.selectionStart;
+  pintar(contenedor, vista.render(estado, ui, param));
+  document.title = `${vista.titulo} · Control de gastos`;
+  const pestana = vista.pestana ?? vista.id;
   for (const enlace of document.querySelectorAll('#tabs a')) {
-    enlace.setAttribute('aria-current', enlace.getAttribute('href') === `#${vista.id}` ? 'page' : 'false');
+    enlace.setAttribute('aria-current', enlace.getAttribute('href') === `#${pestana}` ? 'page' : 'false');
   }
-  contenedor.querySelector('.chip[aria-current="true"]')?.scrollIntoView({ inline: 'center', block: 'nearest' });
+  if (foco) {
+    const nuevo = document.getElementById(foco.id);
+    nuevo?.focus();
+    if (cursor != null) nuevo?.setSelectionRange?.(cursor, cursor);
+  }
 }
 
-// Un solo oyente para todos los botones y campos: data-accion (toque) y data-cambio (campo editado).
-document.addEventListener('click', (ev) => {
+// Un solo oyente para todos los botones y campos: data-accion (toque), data-cambio (campo editado) y data-entrada (al escribir).
+document.addEventListener('click', async (ev) => {
   const el = ev.target.closest('[data-accion]');
   const accion = el && acciones[el.dataset.accion];
-  if (accion && accion(el, ui) !== false) repintar();
+  if (!accion) return;
+  if ((await accion(el, ui)) !== false) repintar();
 });
-document.addEventListener('change', (ev) => {
+document.addEventListener('change', async (ev) => {
   const el = ev.target.closest('[data-cambio]');
-  if (!el) return;
-  cambios[el.dataset.cambio]?.(el, ui);
+  if (!el || !cambios[el.dataset.cambio]) return;
+  await cambios[el.dataset.cambio](el, ui);
   repintar(); // deja el campo con su valor ya formateado, o con el anterior si no era válido
+});
+document.addEventListener('input', (ev) => {
+  const el = ev.target.closest('[data-entrada]');
+  if (!el || !entradas[el.dataset.entrada]) return;
+  entradas[el.dataset.entrada](el, ui);
+  repintar();
 });
 window.addEventListener('hashchange', () => {
   window.scrollTo(0, 0);

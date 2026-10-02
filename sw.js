@@ -2,7 +2,7 @@
 // Estrategia: se responde al instante con lo guardado y en segundo plano se baja la versión nueva.
 // AL PUBLICAR CAMBIOS: sube el número de CACHE. Así el teléfono baja todos los archivos juntos, los
 // instala completos y recarga la app sola; sin subirlo, los cambios llegan archivo por archivo.
-const CACHE = 'gastos-v3';
+const CACHE = 'gastos-v5';
 const ARCHIVOS = [
   './',
   'index.html',
@@ -15,12 +15,22 @@ const ARCHIVOS = [
   'js/seed.js',
   'js/store.js',
   'js/respaldo.js',
+  'js/migrar-v4.js',
+  'js/finanzas.js',
   'js/ui.js',
-  'js/views/mes.js',
-  'js/views/ahorro.js',
-  'js/views/extras.js',
-  'js/views/crucero.js',
-  'js/views/config.js',
+  'js/views/hojas.js',
+  'js/views/piezas.js',
+  'js/views/inicio.js',
+  'js/views/movimientos.js',
+  'js/views/analisis.js',
+  'js/views/ajustes.js',
+  'js/views/cuentas.js',
+  'js/views/categorias.js',
+  'js/views/deudas.js',
+  'js/views/objetivos.js',
+  'js/views/fijos.js',
+  'js/views/planificacion.js',
+  'js/views/centro.js',
   'icons/icon-192.png',
   'icons/icon-512.png',
   'icons/apple-touch-icon.png',

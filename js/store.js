@@ -2,6 +2,7 @@
 // Para pasar a la nube más adelante solo hay que cambiar leer() y escribir(); el resto no se entera.
 import { datosNuevos } from './seed.js';
 import { VERSION_DATOS } from './version.js';
+import { validarV3, convertirAv4 } from './migrar-v4.js';
 
 const BD = 'control-gastos';
 const ALMACEN = 'estado';
@@ -61,6 +62,8 @@ export function migrar(datos) {
     for (const m of datos.meses) m.personal ??= 'Pendiente';
     for (const a of datos.abonos) a.mes ??= null;
   }
+  // v3 → v4: del Excel (salario, pagos fijos, extras y crucero) al modelo general (ver migrar-v4.js).
+  if (datos.version < 4) datos = convertirAv4(validarV3(datos));
   datos.version = VERSION_DATOS;
   return datos;
 }

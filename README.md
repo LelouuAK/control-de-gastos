@@ -1,43 +1,35 @@
 # Control de gastos
 
-App web para llevar el control de tus gastos mensuales desde el celular: pagos fijos, gastos extras, un objetivo de pago (por ejemplo, un crucero) y un plan de ahorro. Se instala en la pantalla de inicio del iPhone como una app y funciona sin internet.
+App web para llevar tus finanzas desde el celular: gastos e ingresos, cuentas, pagos fijos, **deudas en cuotas** y objetivos de ahorro. Se instala en la pantalla de inicio del iPhone como una app, funciona sin internet y tus datos se quedan en tu teléfono.
 
 **Probarla:** <https://lelouuak.github.io/control-de-gastos/>
 
-Nació como una hoja de Excel y conserva su lógica, pensada ahora para usarse con el pulgar.
-
 ## Qué hace
 
-La app tiene cinco pestañas.
+Barra inferior: **Inicio · Movimientos · + · Análisis · Ajustes**.
 
-| Pestaña | Para qué sirve |
+| Pantalla | Para qué sirve |
 |---|---|
-| **Mes** | El tablero de un mes: salario, pagos fijos, extras, crucero y gastos personales, cada uno con su estado **Pendiente / Pagado**, y la cifra «Te queda». El chip **Total** suma todos los meses. |
-| **Ahorro** | Cuánto ahorrarás en total, si superas tu meta, una gráfica con una barra por mes y el detalle de cada mes. |
-| **Extras** | Los gastos que no son fijos, agrupados por mes, cada uno Pagado o Pendiente. |
-| **Crucero** | Seguimiento de un objetivo de pago: cuánto falta, un barco que avanza según lo abonado, la cuota sugerida y los abonos. |
-| **Config** | Salario, pagos fijos y sus días, el objetivo de pago, el respaldo y la restauración de datos. |
+| **Inicio** | Cuánto **te queda este mes** (lo que entra menos lo gastado y lo que falta pagar), lo que toca pagar o cobrar con un botón para marcarlo, tus deudas, tus cuentas, tus objetivos y lo último que anotaste. |
+| **Movimientos** | Lista por mes con buscador y filtros (tipo, cuenta, categoría), o **calendario** con lo anotado y lo que viene cada día. |
+| **+** | Anotar un gasto, un ingreso o una transferencia entre cuentas. Un gasto puede ser el abono a una deuda. |
+| **Análisis** | **Resumen** del mes, 3 meses o el año (balance, % ahorrado contra tu meta, gasto por día, cuánto habrás gastado al cerrar el mes, frente al periodo anterior, lo importante del mes, próximos 30 días y en qué se va el dinero); **Histórico** mes a mes y del año; **Comparar** los últimos 7 o 14 días, o el mes, con el tramo anterior. |
+| **Ajustes** | Cuentas, pagos fijos, deudas, objetivos, categorías, **Planificación**, **Centro financiero**, moneda, meta de ahorro, respaldo y exportación a CSV. |
+| Planificación | Cuánto **puedes gastar** hasta fin de mes (y por día), **límites por categoría** (lo no gastado puede pasar al mes siguiente) y avisos. |
+| Centro financiero | Puntaje de **salud financiera** con cuatro indicadores (ahorro, colchón, deudas y gastos), **fondo de emergencia** y previsión de 30 días. Es una orientación con tus números, no asesoría financiera. |
 
-### Cómo se calcula
+### Deudas
 
-Todo se deriva de unos pocos datos que escribe el usuario; el resto se calcula.
+Cualquier cosa que debas: un préstamo, la tarjeta, un viaje en cuotas o dinero que te prestaron. Se paga de dos formas:
 
-```
-Saldo libre    = salario − plan móvil − abuelos − extras
-Ahorro del mes = saldo libre − cuota del crucero − gastos personales
-Ahorro acumulado = suma de los ahorros de los meses del plan hasta ese mes
+- **En un número de meses:** la cuota es lo que falta entre los meses que quedan hasta el último mes. Si un mes no pagas, la cuota de los siguientes sube.
+- **Con cuota fija:** esa cuota hasta terminar; la última puede ser menor.
 
-Cuota del crucero = faltante / meses restantes
-Meses restantes   = meses para terminar de pagar − cuotas ya pagadas
+Cada deuda tiene su **día de pago**: la cuota aparece en Inicio y en el calendario, y se marca como atrasada si pasa la fecha. Un pago parcial deja pendiente solo lo que falta de la cuota del mes.
 
-Ya pagado  = lo marcado como Pagado
-Por pagar  = lo que sigue en Pendiente (pagos fijos, extras, crucero y gastos personales)
-```
+### Pagos fijos
 
-- Un extra **pendiente** resta del saldo libre (es un gasto comprometido), pero cuenta como «por pagar».
-- Marcar como **Pagado** la cuota del crucero en la pestaña Mes registra un abono ligado a ese mes en la pestaña Crucero; volver a Pendiente lo quita.
-- Cuando un pago fijo sigue Pendiente y su día del mes ya pasó, la app muestra «Venció el día X».
-- La meta de ahorro es un porcentaje del salario y el gasto personal es un estimado mensual; ambos se editan en la pestaña Ahorro.
+Salario, alquiler, teléfono, suscripciones… cada mes, semana, 3 meses, año o una sola vez. No se anotan solos: cuando toca aparecen en Inicio y se marcan como pagados o cobrados con un toque (también se pueden anotar con otro monto u omitir esa vez).
 
 ## Instalar en el iPhone
 
@@ -49,15 +41,14 @@ Por pagar  = lo que sigue en Pendiente (pagos fijos, extras, crucero y gastos pe
 
 ## Tus datos y tu privacidad
 
-- **No hay servidor ni cuentas.** Todo se guarda en el propio dispositivo, en IndexedDB.
-- La app pide al sistema que no borre esos datos por falta de espacio.
+- **No hay servidor ni cuentas de usuario.** Todo se guarda en el propio dispositivo, en IndexedDB.
 - Este repositorio es público y contiene **solo código**; una instalación nueva arranca en blanco.
-- Si borras la app o cambias de teléfono sin respaldo, se pierden los datos. Por eso **Config → Respaldar ahora** genera un archivo `.json` que puedes guardar en Archivos o iCloud Drive, y **Restaurar desde un archivo** lo vuelve a cargar. Al abrir la pestaña Mes, la app avisa si pasan 7 días sin un respaldo (30 si ya hiciste uno).
-- Los respaldos de versiones anteriores se pueden importar: la app los actualiza al formato actual.
+- **Ajustes → Respaldar ahora** genera un archivo `.json` para guardar en Archivos o iCloud Drive; **Restaurar desde un archivo** lo vuelve a cargar. Inicio avisa si pasan 7 días sin un respaldo (30 si ya hiciste uno).
+- Los respaldos de la versión 1 (la que tenía Mes, Ahorro, Extras y Crucero) se pueden importar: se convierten solos al modelo nuevo.
 
 ## Cómo está hecha
 
-HTML, CSS y JavaScript sin librerías ni paso de compilación. Usa módulos ES, IndexedDB, un service worker para el modo sin conexión, `<dialog>` para las hojas de captura y SVG para la gráfica y el barco.
+HTML, CSS y JavaScript sin librerías ni paso de compilación: módulos ES, IndexedDB, un service worker para el modo sin conexión, `<dialog>` para las hojas de captura y SVG para las gráficas.
 
 ```
 .
@@ -65,62 +56,58 @@ HTML, CSS y JavaScript sin librerías ni paso de compilación. Usa módulos ES, 
 ├─ css/styles.css
 ├─ icons/
 └─ js/
-   ├─ main.js       arranque, pestañas y un solo oyente de toques y cambios
-   ├─ calc.js       todas las fórmulas, sin nada de pantalla
-   ├─ store.js      guardado en IndexedDB y única puerta para modificar datos
-   ├─ respaldo.js   exportar, importar y validar el archivo de respaldo
-   ├─ seed.js       datos de una instalación nueva (en blanco)
-   ├─ format.js     dinero, fechas y lectura de montos ("12,50" y "12.50")
-   ├─ ui.js         plantillas seguras, avisos, hojas de captura y confirmaciones
+   ├─ main.js        arranque, rutas (#inicio, #deuda/<id>…) y un solo oyente de toques y cambios
+   ├─ calc.js        cálculos base (saldos, mes, pagos fijos, deudas, objetivos), sin pantalla
+   ├─ finanzas.js    periodos, comparar, límites, puedes gastar, previsión, salud financiera y avisos
+   ├─ store.js       guardado en IndexedDB y única puerta para modificar datos
+   ├─ migrar-v4.js   paso de los datos de la versión 1 al modelo actual
+   ├─ respaldo.js    exportar, importar y validar respaldos; CSV
+   ├─ seed.js        datos de una instalación nueva (en blanco, con categorías base)
+   ├─ format.js      dinero, monedas, fechas y lectura de montos ("12,50" y "12.50")
+   ├─ ui.js          plantillas seguras, avisos, hojas de captura y piezas comunes
    ├─ version.js
-   └─ views/        mes.js · ahorro.js · extras.js · crucero.js · config.js
+   └─ views/         inicio · movimientos · analisis · ajustes · cuentas · categorias · deudas
+                     objetivos · fijos · planificacion · centro · hojas (captura) · piezas (filas comunes)
 ```
 
-El flujo es siempre el mismo: **toque → `store.cambiar()` → se guarda → se repinta la pantalla con las fórmulas de `calc.js`**. Todo lo que escribe el usuario se escapa antes de mostrarse.
+El flujo es siempre el mismo: **toque → `store.cambiar()` → se guarda → se repinta la pantalla con `calc.js`**. Todo lo que escribe el usuario se escapa antes de mostrarse.
 
 ### Datos guardados
 
-Un solo documento JSON. Solo se guarda lo que escribe el usuario.
+Un solo documento JSON. Solo se guarda lo que escribe el usuario; saldos, pendientes, cuotas y avances se calculan.
 
 ```json
 {
-  "version": 3,
-  "config": { "salario": 1000, "movil": 30, "movilDia": 6, "abuelos": 50, "abuelosDia": 30,
-              "cruceroFaltante": 400, "cruceroMeses": 4,
-              "gastoPersonal": 150, "metaAhorroPct": 0.2, "ahorroDesde": "2026-09" },
-  "meses":  [ { "id": "2026-09", "movil": "Pendiente", "abuelos": "Pendiente",
-                "personal": "Pendiente", "ahorroReal": null } ],
-  "extras": [ { "id": "…", "mes": "2026-09", "concepto": "Regalo", "monto": 20,
-                "estado": "Pagado", "creado": "…" } ],
-  "abonos": [ { "id": "…", "fecha": "2026-09-20", "monto": 100, "nota": "", "mes": "2026-09" } ],
-  "meta":   { "creado": "…", "modificado": "…", "ultimoRespaldo": null }
+  "version": 4,
+  "ajustes":    { "nombre": "", "moneda": "USD", "metaAhorroPct": 0.2 },
+  "cuentas":    [ { "id": "principal", "nombre": "Principal", "tipo": "banco", "saldoInicial": 0, "archivada": false } ],
+  "categorias": [ { "id": "comida", "tipo": "gasto", "nombre": "Comida", "icono": "🛒" } ],
+  "movimientos":[ { "id": "…", "tipo": "gasto", "monto": 20, "concepto": "Almuerzo", "fecha": "2026-10-01",
+                    "cuentaId": "principal", "cuentaDestinoId": null, "categoriaId": "comida", "nota": "",
+                    "deudaId": null, "fijo": null, "creado": "…" } ],
+  "fijos":      [ { "id": "…", "tipo": "gasto", "concepto": "Alquiler", "monto": 300, "frecuencia": "mensual",
+                    "inicio": "2026-10-05", "cuentaId": "principal", "categoriaId": "vivienda", "pausado": false, "omitidas": [] } ],
+  "deudas":     [ { "id": "…", "nombre": "Préstamo", "total": 1200, "cuotas": 12, "cuotaFija": null,
+                    "inicio": "2026-10", "diaPago": 15, "cuentaId": "principal", "nota": "" } ],
+  "objetivos":  [ { "id": "…", "nombre": "Moto", "meta": 3000, "fechaLimite": null, "icono": "🏍️",
+                    "aportes": [ { "id": "…", "fecha": "2026-10-01", "monto": 100, "cuentaId": "principal", "nota": "" } ] } ],
+  "limites":    [ { "categoriaId": "personal", "monto": 150, "acumular": false, "desde": "2026-10" } ],
+  "meta":       { "creado": "…", "modificado": "…", "ultimoRespaldo": null }
 }
 ```
 
-Para cambiar la forma de los datos: sube `VERSION_DATOS` en `js/version.js` y agrega el paso de migración en `js/store.js → migrar()`. Los datos guardados y los respaldos antiguos se actualizan solos al abrirse.
+- Un movimiento con `fijo: { id, fecha }` es el pago de un pago fijo en esa fecha; con `deudaId`, el abono a una deuda.
+- Para cambiar la forma de los datos: sube `VERSION_DATOS` en `js/version.js` y agrega el paso en `js/store.js → migrar()`.
 
-### Desarrollo
+### Desarrollo y publicación
 
-No hay nada que instalar: sirve la carpeta con cualquier servidor estático y abre `index.html` desde ahí (los service workers y los módulos ES no funcionan abriendo el archivo directamente). El service worker guarda copias, así que al probar cambios conviene borrarlo desde las herramientas del navegador.
-
-Las pruebas viven fuera de este repositorio. Comparan las fórmulas de `calc.js` contra los valores de la hoja de cálculo original, y cubren la migración de datos y la validación de respaldos.
-
-### Publicar una nueva versión
-
-1. Haz los cambios y sube `VERSION_APP` en `js/version.js`.
-2. **Sube el número de `CACHE` en `sw.js`** (`gastos-v3` → `gastos-v4`…). Así el teléfono baja todos los archivos juntos, los instala completos y recarga la app sola.
-3. `git add -A`, `git commit` y `git push`. GitHub Pages tarda 1–2 minutos.
-4. La app instalada se actualiza al abrirla con internet, sin tocar los datos guardados.
-
-Se publica desde la rama `main`, carpeta raíz. El archivo `.nojekyll` evita que GitHub procese el sitio como Jekyll.
+Sirve la carpeta con cualquier servidor estático (los service workers y los módulos ES no funcionan abriendo el archivo directamente). Para publicar: sube `VERSION_APP` y el número de `CACHE` en `sw.js`, y haz `git push`; GitHub Pages tarda 1–2 minutos y la app instalada se actualiza sola al abrirla con internet.
 
 ## Compatibilidad y límites
 
-- Pensada para **iPhone con iOS 15.4 o superior**; la instalación en la pantalla de inicio se hace desde Safari.
-- Probada en un navegador de escritorio con el tamaño de un iPhone 15, en claro y oscuro y sin conexión. Todavía sin confirmar en un iPhone real: la instalación desde Safari, el teclado sobre las hojas de captura y el botón de respaldo hacia la app Archivos.
-- El salario, el plan móvil y los abuelos son un solo valor para todos los meses: cambiarlos modifica también los meses pasados.
-- El gasto personal es un estimado; «Pagado» solo significa que ya lo gastaste este mes.
-- La pestaña Mes en modo **Total** incluye los meses anteriores al plan de ahorro, que no llevan crucero ni gasto personal.
+- Pensada para **iPhone con iOS 15.4 o superior**.
+- Los pagos fijos no se registran solos: hay que marcarlos (así la app refleja lo que de verdad pasó).
+- La moneda solo cambia el símbolo; no convierte montos.
 
 ## Licencia
 
